@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conflict Conversation Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #e8e0d4;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image: radial-gradient(ellipse at 20% 20%, rgba(180,140,80,0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 80%, rgba(100,120,160,0.06) 0%, transparent 60%);
+    }
+
+    .app { width: 100%; max-width: 680px; }
+
+    /* HEADER */
+    .app-header { margin-bottom: 2rem; }
+    .app-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      color: #e8e0d4;
+      margin-bottom: 0.2rem;
+      letter-spacing: -0.01em;
+    }
+    .app-sub { font-size: 13px; color: #7a7060; font-weight: 300; }
+
+    /* SCENE SELECTOR */
+    .scene-selector {
+      background: #1a1a1a;
+      border: 1px solid #2a2520;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .scene-selector h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: #c8b890;
+      margin-bottom: 1rem;
+      font-weight: 400;
+    }
+    .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 500px) { .scene-grid { grid-template-columns: 1fr; } }
+
+    .scene-btn {
+      background: #141414;
+      border: 1px solid #252520;
+      border-radius: 8px;
+      padding: 0.7rem 0.9rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .scene-btn:hover { border-color: #c8b890; background: #1e1c18; }
+    .scene-btn:hover .scene-title { color: #c8b890; }
+    .scene-title { font-size: 13px; font-weight: 500; color: #e8e0d4; margin-bottom: 2px; }
+    .scene-sub { font-size: 11px; color: #5a5448; }
+
+    /* TOP BAR */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .persona-row { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: #1e1c18;
+      border: 1px solid #c8b890;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #c8b890;
+      flex-shrink: 0;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .persona-name { font-size: 15px; font-weight: 500; color: #e8e0d4; }
+    .persona-role { font-size: 12px; color: #5a5448; }
+    .change-btn {
+      font-size: 12px; padding: 4px 12px;
+      border-radius: 20px;
+      background: #1a1a1a;
+      border: 1px solid #2a2520;
+      color: #7a7060;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .change-btn:hover { border-color: #c8b890; color: #c8b890; }
+
+    /* CONTEXT BANNER */
+    .context-banner {
+      font-size: 13px;
+      color: #7a7060;
+      background: #141414;
+      border-left: 2px solid #c8b890;
+      padding: 0.65rem 1rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.6;
+      display: none;
+      font-style: italic;
+    }
+
+    /* CHAT */
+    .chat-window {
+      background: #141414;
+      border: 1px solid #2a2520;
+      border-radius: 12px;
+      min-height: 260px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      scroll-behavior: smooth;
+    }
+    .chat-window::-webkit-scrollbar { width: 4px; }
+    .chat-window::-webkit-scrollbar-track { background: transparent; }
+    .chat-window::-webkit-scrollbar-thumb { background: #2a2520; border-radius: 2px; }
+
+    .empty-state {
+      display: flex; align-items: center; justify-content: center;
+      height: 200px; color: #3a3530; font-size: 14px; text-align: center;
+      font-style: italic;
+    }
+
+    .msg { display: flex; gap: 8px; max-width: 90%; }
+    .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+    .msg-av {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .msg.other .msg-av { background: #1e1c18; border: 1px solid #c8b890; color: #c8b890; }
+    .msg.user .msg-av { background: #1a2030; border: 1px solid #4060a0; color: #8090c0; }
+    .msg-bubble { padding: 0.65rem 0.9rem; font-size: 14px; line-height: 1.6; border-radius: 10px; }
+    .msg.other .msg-bubble { background: #1e1c18; border: 1px solid #2a2520; border-radius: 4px 10px 10px 10px; color: #e8e0d4; }
+    .msg.user .msg-bubble { background: #1a2030; border: 1px solid #2a3050; border-radius: 10px 4px 10px 10px; color: #c0cce8; }
+
+    /* CHOICES */
+    .choices-area { margin-bottom: 0.75rem; }
+    .choices-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #5a5448; margin-bottom: 0.5rem;
+    }
+    .choice-btn {
+      display: block; width: 100%; margin: 0.35rem 0;
+      padding: 0.65rem 1rem;
+      background: #1a1a1a; border: 1px solid #252520;
+      border-radius: 8px; cursor: pointer; text-align: left;
+      font-size: 13px; line-height: 1.5; color: #c8c0b0;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .choice-btn:hover:not(:disabled) { border-color: #c8b890; color: #e8e0d4; background: #1e1c18; }
+    .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .choice-btn.selected { border-color: #4060a0; background: #1a2030; color: #c0cce8; }
+
+    /* COACH CARD */
+    .coach-card {
+      background: #1a180e;
+      border: 1px solid #3a3010;
+      border-left: 3px solid #c8b890;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+    }
+    .coach-card.visible { display: block; }
+    .coach-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #c8b890; margin-bottom: 0.4rem;
+    }
+    .coach-text { color: #c8c0a8; margin-bottom: 0.5rem; }
+    .tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 10px; }
+    .tag-good { background: #0e1e14; color: #60b880; border: 1px solid #1a4020; }
+    .tag-caution { background: #1e1808; color: #c8a040; border: 1px solid #3a2c08; }
+    .tag-improve { background: #1e0e0e; color: #c06060; border: 1px solid #3a1818; }
+
+    /* HINT ROW */
+    .hint-row { display: none; gap: 6px; margin-bottom: 0.6rem; flex-wrap: wrap; align-items: center; }
+    .hint-label { font-size: 11px; color: #3a3530; }
+    .hint-btn {
+      font-size: 11px; padding: 3px 10px; border-radius: 10px;
+      background: #1a1a1a; border: 1px solid #252520;
+      color: #5a5448; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .hint-btn:hover { border-color: #c8b890; color: #c8b890; }
+
+    /* INPUT */
+    .input-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 0.5rem; }
+    textarea {
+      flex: 1; resize: none; font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid #2a2520;
+      background: #141414; color: #e8e0d4;
+      min-height: 68px; line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    textarea::placeholder { color: #3a3530; }
+    textarea:focus { outline: none; border-color: #c8b890; }
+    textarea:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .send-btn {
+      padding: 0 1.1rem; height: 40px;
+      font-size: 13px; font-weight: 500;
+      border-radius: 8px;
+      background: #c8b890; color: #0f0f0f;
+      border: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity 0.15s;
+      white-space: nowrap; align-self: flex-end;
+    }
+    .send-btn:hover:not(:disabled) { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .footer-row { display: flex; justify-content: space-between; align-items: center; }
+    .turn-counter { font-size: 12px; color: #3a3530; }
+    .reset-btn {
+      font-size: 12px; color: #5a5448; background: none; border: none;
+      cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+      font-family: 'DM Sans', sans-serif; display: none;
+    }
+    .reset-btn:hover { color: #c8b890; }
+
+    /* TYPING */
+    .typing-dots { display: flex; gap: 4px; padding: 4px 2px; align-items: center; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: #5a5448; animation: bounce 0.9s ease-in-out infinite; }
+    .dot:nth-child(2) { animation-delay: 0.15s; }
+    .dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="app-header">
+    <div class="app-title">Conflict Conversation Simulator</div>
+    <div class="app-sub">Practice difficult workplace conversations with coaching feedback</div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="persona-row">
+      <div class="avatar" id="other-avatar">?</div>
+      <div>
+        <div class="persona-name" id="other-name">Choose a scenario</div>
+        <div class="persona-role" id="other-role">Select below to begin</div>
+      </div>
+    </div>
+    <button class="change-btn" onclick="toggleSelector()">Change scenario</button>
+  </div>
+
+  <!-- SCENE SELECTOR -->
+  <div class="scene-selector" id="scene-selector">
+    <h3>Choose a conflict scenario</h3>
+    <div class="scene-grid">
+      <button class="scene-btn" onclick="selectScene(0)">
+        <div class="scene-title">Employee vs. employee</div>
+        <div class="scene-sub">Tension over shared work</div>
+      </button>
+      <button class="scene-btn" onclick="selectScene(1)">
+        <div class="scene-title">Manager vs. direct report</div>
+        <div class="scene-sub">Performance concern</div>
+      </button>
+      <button class="scene-btn" onclick="selectScene(2)">
+        <div class="scene-title">Giving difficult feedback</div>
+        <div class="scene-sub">Behavior impacting the team</div>
+      </button>
+      <button class="scene-btn" onclick="selectScene(3)">
+        <div class="scene-title">Responding to unfair treatment</div>
+        <div class="scene-sub">Feeling overlooked or dismissed</div>
+      </button>
+      <button class="scene-btn" onclick="selectScene(4)">
+        <div class="scene-title">Disagreeing with a decision</div>
+        <div class="scene-sub">Pushing back constructively</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTEXT -->
+  <div class="context-banner" id="context-banner"></div>
+
+  <!-- CHAT -->
+  <div class="chat-window" id="chat-window">
+    <div class="empty-state">Select a scenario above to begin your practice conversation.</div>
+  </div>
+
+  <!-- COACH -->
+  <div class="coach-card" id="coach-card">
+    <div class="coach-label">⟡ Coach Feedback</div>
+    <div class="coach-text" id="coach-text"></div>
+    <div class="tag-row" id="tag-row"></div>
+  </div>
+
+  <!-- CHOICES -->
+  <div class="choices-area" id="choices-area" style="display:none">
+    <div class="choices-label">How do you respond?</div>
+    <div id="choices"></div>
+  </div>
+
+  <!-- HINTS -->
+  <div class="hint-row" id="hint-row">
+    <span class="hint-label">Tip:</span>
+    <span id="hint-text" style="font-size:13px;color:#5a5448;font-style:italic;"></span>
+  </div>
+
+  <!-- INPUT (free text mode placeholder — hidden in this version) -->
+  <div class="footer-row">
+    <span class="turn-counter" id="turn-counter"></span>
+    <button class="reset-btn" id="reset-btn" onclick="resetScene()">Start over</button>
+  </div>
+
+</div>
+
+<script>
+var scenes = [
+  {
+    id: 0,
+    name: 'Jordan S.',
+    initials: 'JS',
+    role: 'Colleague — Marketing',
+    context: 'You manage a cross-functional project. Jordan, a peer on the marketing team, has missed two deadlines that held up your team. This is your first direct conversation about it.',
+    hint: 'Lead with curiosity before conclusions — you may not know the full picture yet.',
+    exchanges: [
+      {
+        other: "Hey, do you have a minute? I know things have been hectic.",
+        choices: [
+          {
+            text: "Sure. I actually wanted to talk too — our team has been impacted by the missed deadlines and I want to understand what's been happening on your end.",
+            response: "Yeah, honestly it's been a rough few weeks. We had two people out sick and I've been covering their work on top of mine. I should have flagged it earlier — I'm sorry.",
+            coaching: "Well done. You named the impact without accusation and opened the door for their perspective. That balance of honesty and curiosity is exactly right.",
+            tags: [{ l: "Named the impact", t: "good" }, { l: "Invited dialogue", t: "good" }]
+          },
+          {
+            text: "Yes. The missed deadlines have caused real problems for us. This can't keep happening.",
+            response: "I hear you, but I've been dealing with a lot. It wasn't intentional.",
+            coaching: "You're right to name the problem, but the tone closes down dialogue before it starts. 'This can't keep happening' signals a verdict before hearing their side — which may put them on the defensive.",
+            tags: [{ l: "Named the issue", t: "good" }, { l: "Closed tone", t: "caution" }, { l: "No curiosity shown", t: "improve" }]
+          },
+          {
+            text: "It's fine, don't worry about it. These things happen.",
+            response: "Oh — okay, thanks for understanding.",
+            coaching: "Avoiding the issue entirely lets the pattern continue. Saying 'it's fine' when it isn't undermines trust over time and leaves the real problem unaddressed.",
+            tags: [{ l: "Conflict avoided", t: "improve" }, { l: "Problem unresolved", t: "improve" }]
+          }
+        ]
+      },
+      {
+        other: "I should have communicated better. What can I do to help get things back on track?",
+        choices: [
+          {
+            text: "I appreciate that. Let's set up a quick weekly check-in so we can flag blockers early — would that work for you?",
+            response: "Absolutely. That would actually help me too. Let's set it up.",
+            coaching: "Excellent. You moved from the problem to a concrete, collaborative solution. Proposing something mutual — not punitive — keeps the relationship intact.",
+            tags: [{ l: "Solution-focused", t: "good" }, { l: "Collaborative tone", t: "good" }, { l: "Specific next step", t: "good" }]
+          },
+          {
+            text: "Just make sure it doesn't happen again.",
+            response: "Right... I'll do my best.",
+            coaching: "This misses the opportunity to build a system that prevents recurrence. Vague warnings without structure rarely change behavior long-term.",
+            tags: [{ l: "No actionable plan", t: "improve" }, { l: "Relationship tension left unresolved", t: "caution" }]
+          },
+          {
+            text: "Let's loop in our managers to make sure there's accountability going forward.",
+            response: "Oh — I didn't realize it had gotten to that level. I thought we were just talking.",
+            coaching: "Escalating to managers is sometimes appropriate, but doing it as a first step after they've offered to fix things can feel like a punishment rather than a solution — and may damage trust.",
+            tags: [{ l: "Premature escalation", t: "caution" }, { l: "Missed collaborative opportunity", t: "improve" }]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 1,
+    name: 'Marcus T.',
+    initials: 'MT',
+    role: 'Direct report — Operations',
+    context: "Marcus is a solid employee who has been arriving late and seeming disengaged for the past three weeks. You've set up a one-on-one to check in. Your goal is to understand what's happening and re-engage him.",
+    hint: "Open with genuine curiosity — something may be going on outside work that you don't know about.",
+    exchanges: [
+      {
+        other: "Thanks for meeting with me. I'll be honest — I wasn't sure what this was about.",
+        choices: [
+          {
+            text: "I appreciate you being here. I wanted to check in because I've noticed some changes lately — the late arrivals, and you seem a bit distant. I'm not here to reprimand you. I just want to understand if everything's okay.",
+            response: "Honestly... things have been hard at home. I didn't want to bring it into work but it's been affecting me more than I realized.",
+            coaching: "This is a strong opening. You named the behavior specifically without labeling him, removed the threat ('I'm not here to reprimand you'), and made space for a real conversation. That's how trust is built.",
+            tags: [{ l: "Specific, not judgmental", t: "good" }, { l: "Removed threat", t: "good" }, { l: "Showed genuine care", t: "good" }]
+          },
+          {
+            text: "Marcus, your attendance has been a problem and your attitude has changed. I need to know what's going on.",
+            response: "My attitude? I've been doing my work...",
+            coaching: "'Attitude' is a loaded word that tends to trigger defensiveness immediately. It labels the person rather than describing the behavior. Try naming what you observed specifically instead.",
+            tags: [{ l: "Specific behavior named", t: "good" }, { l: "Personality-focused language", t: "improve" }, { l: "Defensive reaction triggered", t: "caution" }]
+          },
+          {
+            text: "I'll be direct — if the late arrivals continue, it becomes a formal performance issue. I wanted to give you a heads up.",
+            response: "I understand.",
+            coaching: "Leading with a disciplinary warning closes the door on understanding. If something personal is going on, this approach makes it much less likely Marcus will tell you — and you lose the chance to actually help.",
+            tags: [{ l: "Clear expectations", t: "good" }, { l: "No curiosity shown", t: "improve" }, { l: "Relationship opportunity missed", t: "caution" }]
+          }
+        ]
+      },
+      {
+        other: "Things have been hard at home. I didn't want to bring it into work, but it's been harder than I thought.",
+        choices: [
+          {
+            text: "Thank you for trusting me with that. You don't have to share details. Is there anything we can do on our end — adjusted hours, a lighter load this week — to help you stabilize?",
+            response: "Even just knowing you're not frustrated with me helps a lot. A slightly later start time for a couple weeks would actually make a big difference.",
+            coaching: "Excellent. You acknowledged the disclosure, respected his privacy, and moved to practical support. This is what re-engagement looks like — meeting someone where they are.",
+            tags: [{ l: "Acknowledged disclosure", t: "good" }, { l: "Respected privacy", t: "good" }, { l: "Offered concrete support", t: "good" }]
+          },
+          {
+            text: "I appreciate you telling me. What's going on at home, if you don't mind sharing?",
+            response: "It's — it's pretty personal. I'd rather not get into it.",
+            coaching: "Asking for details puts the employee in an uncomfortable position. You don't need to know the specifics to offer support — and pressing can feel intrusive.",
+            tags: [{ l: "Warm response", t: "good" }, { l: "Probed for personal detail", t: "caution" }]
+          },
+          {
+            text: "I understand, but I need you to be able to separate work and personal life. We all have things going on.",
+            response: "Right. Sorry.",
+            coaching: "This response dismisses what he just shared and implies his struggles are an inconvenience. It will likely cause him to disengage further rather than re-engage.",
+            tags: [{ l: "Invalidating language", t: "improve" }, { l: "Empathy missing", t: "improve" }]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: 'Priya N.',
+    initials: 'PN',
+    role: 'Team member — Design',
+    context: "Priya is talented but frequently interrupts others in meetings and talks over junior teammates. Two team members have mentioned it to you privately. You need to give Priya this feedback directly.",
+    hint: "Describe specific behavior and its impact — avoid personality labels like 'aggressive' or 'dominant.'",
+    exchanges: [
+      {
+        other: "You wanted to chat? I feel like things have been going really well lately!",
+        choices: [
+          {
+            text: "Things have been going well in a lot of ways — your design work has been strong. I do want to share some feedback about meeting dynamics. I've noticed a pattern where some teammates don't get to finish their thoughts before the conversation moves on. I want to make sure everyone's voice is coming through.",
+            response: "Oh. I didn't realize I was doing that... can you give me an example?",
+            coaching: "Strong delivery. You opened with a genuine positive, described the behavior specifically without labeling it, and framed it around the team rather than making it personal. Asking for examples is a healthy sign she's engaged.",
+            tags: [{ l: "Opened with positive", t: "good" }, { l: "Behavior-specific", t: "good" }, { l: "Team-framed, not personal", t: "good" }]
+          },
+          {
+            text: "I've been getting feedback that you're dominating conversations in meetings and it's making people uncomfortable.",
+            response: "Dominating? I'm just engaged. Who said that?",
+            coaching: "Two issues: 'dominating' is a personality label that invites pushback, and referencing unnamed sources shifts focus to who said it rather than the behavior itself. Both make it harder to have a productive conversation.",
+            tags: [{ l: "Personality label used", t: "improve" }, { l: "Referenced anonymous sources", t: "caution" }, { l: "Triggered defensiveness", t: "caution" }]
+          },
+          {
+            text: "I want to give you some feedback. Some people feel like you don't listen in meetings.",
+            response: "That doesn't sound like me. I'm very collaborative.",
+            coaching: "'Some people feel' is vague and sounds like a rumor. Specific observed behavior lands better than secondhand impressions. Vague feedback is easy to dismiss — and she just did.",
+            tags: [{ l: "Vague language", t: "improve" }, { l: "No specific behavior named", t: "improve" }]
+          }
+        ]
+      },
+      {
+        other: "Can you give me a specific example of when I did that?",
+        choices: [
+          {
+            text: "Yes — in Tuesday's sprint review, Jamie was mid-sentence explaining the design rationale and you jumped in with a different direction before they finished. It happened a couple of times in that meeting. I don't think it's intentional, but it does mean some ideas don't get fully heard.",
+            response: "You're right — I remember that meeting. I was excited and I just... went for it. I'll be more conscious of it.",
+            coaching: "Excellent. Specific, recent, and observed firsthand. You also added 'I don't think it's intentional' which gave her an off-ramp and made the feedback feel fair rather than accusatory. This is textbook effective feedback.",
+            tags: [{ l: "Specific example", t: "good" }, { l: "Assumed positive intent", t: "good" }, { l: "Recent and firsthand", t: "good" }]
+          },
+          {
+            text: "It's happened in several meetings — it's become a pattern that others have noticed.",
+            response: "I still don't know what specifically I'm supposed to have done.",
+            coaching: "Without a specific example, feedback becomes an accusation. If you can't name a specific moment, it's much harder for her to change the behavior — she doesn't know what to look for.",
+            tags: [{ l: "Pattern noted", t: "good" }, { l: "No specific example given", t: "improve" }]
+          },
+          {
+            text: "I'd rather not call out a specific moment — I just want you to be more mindful going forward.",
+            response: "Okay... I'll try.",
+            coaching: "Avoiding the example lets her off the hook without really understanding the issue. Mindfulness without context is hard to act on. She's likely to leave this conversation confused about what actually needs to change.",
+            tags: [{ l: "No actionable example", t: "improve" }, { l: "Vague ask", t: "improve" }]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: 'Director Chen',
+    initials: 'DC',
+    role: 'Your manager — Director',
+    context: "You led a six-month initiative that succeeded, but in the all-hands meeting your director attributed the work entirely to another team. You've requested time to address it.",
+    hint: "State facts calmly before feelings — and be specific about what you're asking for.",
+    exchanges: [
+      {
+        other: "Good timing — I have about ten minutes. What's on your mind?",
+        choices: [
+          {
+            text: "I appreciated the all-hands shoutout for the initiative. I did want to flag something — the attribution went entirely to the product team, and my team led the execution for six months. I don't think it was intentional, but I want to make sure our contribution is visible, especially for my team's morale.",
+            response: "You're right — I realize now I glossed over the operations piece. That was an oversight on my part. Let me think about how we can correct that.",
+            coaching: "Well handled. You stated the facts calmly, assumed positive intent ('I don't think it was intentional'), and named the impact on your team rather than just your ego. That framing made it easy for Chen to hear you.",
+            tags: [{ l: "Facts before feelings", t: "good" }, { l: "Assumed positive intent", t: "good" }, { l: "Named team impact", t: "good" }]
+          },
+          {
+            text: "I'm upset about what happened in the all-hands. My team worked incredibly hard and got zero credit. It felt disrespectful.",
+            response: "I hear that you're frustrated. I wasn't trying to disrespect anyone.",
+            coaching: "Starting with 'I'm upset' and 'disrespectful' puts Chen on the defensive before you've stated the facts. Feelings are valid but leading with them — especially strong ones — can shift the conversation to managing your emotions rather than solving the problem.",
+            tags: [{ l: "Honest about impact", t: "good" }, { l: "Led with emotion, not facts", t: "caution" }, { l: "Triggered defensiveness", t: "caution" }]
+          },
+          {
+            text: "I just wanted to check in — everything's fine, I know you're busy. I just wanted to make sure you knew my team contributed.",
+            response: "Of course — you all did great work.",
+            coaching: "Minimizing your own concern ('everything's fine') means Chen has no reason to take action. You've left without a resolution and the pattern is likely to repeat. Calm and direct is better than deferential.",
+            tags: [{ l: "Non-confrontational", t: "good" }, { l: "Issue not clearly raised", t: "improve" }, { l: "No ask made", t: "improve" }]
+          }
+        ]
+      },
+      {
+        other: "That was an oversight on my part. What would feel like a fair acknowledgment to you?",
+        choices: [
+          {
+            text: "I think a mention in the follow-up email — or even a quick callout in the next team meeting — would go a long way. It matters more for my team's sense of recognition than for me personally.",
+            response: "That's very reasonable. I'll make sure it's in the recap email this week and I'll mention it at the next all-hands.",
+            coaching: "Perfect. You asked for something specific and achievable, and grounded it in your team's needs rather than personal grievance. That makes the ask easy to say yes to.",
+            tags: [{ l: "Specific ask", t: "good" }, { l: "Team-centered", t: "good" }, { l: "Reasonable scope", t: "good" }]
+          },
+          {
+            text: "I'd want a formal acknowledgment in front of the full company that my team was misrepresented.",
+            response: "I understand the frustration, but I don't think a formal correction at that scale is warranted for an oversight.",
+            coaching: "The ask is disproportionate to the situation, which makes it harder for Chen to agree and shifts the dynamic from collaborative to adversarial. Calibrate your ask to the scale of the issue.",
+            tags: [{ l: "Advocated for team", t: "good" }, { l: "Ask disproportionate to situation", t: "caution" }]
+          },
+          {
+            text: "I don't need anything specific — I just wanted you to know.",
+            response: "I appreciate you telling me.",
+            coaching: "You had a clear opening to ask for something concrete and didn't take it. Without a specific ask, nothing changes. Being direct about what you need is not demanding — it's efficient.",
+            tags: [{ l: "Issue raised", t: "good" }, { l: "No ask made", t: "improve" }, { l: "Opportunity missed", t: "caution" }]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 4,
+    name: 'Sam R.',
+    initials: 'SR',
+    role: 'Peer manager — Product',
+    context: "Your peer Sam announced a process change in a team meeting that will significantly slow down your team's workflow — without consulting you first. You've pulled them aside afterward.",
+    hint: "Focus on shared goals and impact, not territory. You're peers — frame this as alignment, not confrontation.",
+    exchanges: [
+      {
+        other: "I saw you wanted to talk. Look, I know change is hard, but leadership approved this.",
+        choices: [
+          {
+            text: "I get that leadership approved it, and I'm not questioning that. What I want to flag is the impact on my team's workflow — we weren't consulted, and this will add significant overhead to our process. I'd like us to think through whether there's a way to meet the goal without that friction.",
+            response: "Fair enough. I honestly didn't think it would affect your team that much. What specifically is the bottleneck?",
+            coaching: "Strong opening. You acknowledged their authority, separated the approval from the implementation, and focused on problem-solving rather than blame. That's how peers stay aligned.",
+            tags: [{ l: "Acknowledged authority", t: "good" }, { l: "Named specific impact", t: "good" }, { l: "Collaborative framing", t: "good" }]
+          },
+          {
+            text: "You should have talked to me before announcing that. It wasn't okay to blindside my team.",
+            response: "I had a tight timeline and leadership wanted it moved on. I can't always consult everyone.",
+            coaching: "The frustration is understandable, but leading with 'you should have' puts Sam immediately on the defensive. It also makes the conversation about the process breach rather than the actual impact — and you lose the chance to solve the problem.",
+            tags: [{ l: "Raised valid concern", t: "good" }, { l: "Accusatory opening", t: "improve" }, { l: "Triggered defensiveness", t: "caution" }]
+          },
+          {
+            text: "No worries — I just wanted to make sure we're aligned. We'll figure it out.",
+            response: "Great. I appreciate the flexibility.",
+            coaching: "Letting it go entirely means your team absorbs the impact silently. 'We'll figure it out' without raising the issue leaves you without any path to relief — and Sam without the information to make better decisions next time.",
+            tags: [{ l: "Kept relationship smooth", t: "good" }, { l: "Issue not raised", t: "improve" }, { l: "No solution explored", t: "improve" }]
+          }
+        ]
+      },
+      {
+        other: "What specifically is the bottleneck for your team?",
+        choices: [
+          {
+            text: "The new approval step adds two to three days to every release cycle. For our team that means we'll miss the sprint cadence we've built our workflow around. Could we explore a lighter-weight version — maybe async approval for low-risk changes?",
+            response: "That's actually a reasonable middle ground. Let me take that back to the process owner and see if we can carve out an exception.",
+            coaching: "Excellent. You gave a concrete, quantified impact and immediately offered a constructive alternative. That's how you turn a grievance into a productive conversation — and get actual results.",
+            tags: [{ l: "Quantified the impact", t: "good" }, { l: "Proposed alternative", t: "good" }, { l: "Constructive, not combative", t: "good" }]
+          },
+          {
+            text: "Honestly everything about this change slows us down. It wasn't designed with our team in mind.",
+            response: "I hear you, but the process has to apply broadly — I can't carve out exceptions for every team.",
+            coaching: "Vague frustration ('everything') without specifics makes it hard to problem-solve. Without a concrete bottleneck to point to, Sam has nothing to bring back to the process owner.",
+            tags: [{ l: "Honest about frustration", t: "good" }, { l: "Too vague to act on", t: "improve" }, { l: "No solution offered", t: "improve" }]
+          },
+          {
+            text: "I'll document the impact and send it to both our managers so they have visibility.",
+            response: "That feels like an escalation. I thought we were just talking.",
+            coaching: "Escalating to managers mid-conversation — before you've tried to solve it together — signals distrust. It often creates more friction than the original problem. Try resolving it peer-to-peer first.",
+            tags: [{ l: "Creating a paper trail", t: "caution" }, { l: "Premature escalation", t: "improve" }, { l: "Peer resolution skipped", t: "improve" }]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+var state = {
+  scene: null,
+  exchangeIndex: 0,
+  turns: 0,
+  selectorOpen: true
+};
+
+function toggleSelector() {
+  state.selectorOpen = !state.selectorOpen;
+  document.getElementById('scene-selector').style.display = state.selectorOpen ? 'block' : 'none';
+}
+
+function selectScene(idx) {
+  var scene = scenes[idx];
+  state.scene = scene;
+  state.exchangeIndex = 0;
+  state.turns = 0;
+  state.selectorOpen = false;
+
+  document.getElementById('scene-selector').style.display = 'none';
+  document.getElementById('other-avatar').textContent = scene.initials;
+  document.getElementById('other-name').textContent = scene.name;
+  document.getElementById('other-role').textContent = scene.role;
+
+  var banner = document.getElementById('context-banner');
+  banner.style.display = 'block';
+  banner.textContent = scene.context;
+
+  var hintRow = document.getElementById('hint-row');
+  hintRow.style.display = 'flex';
+  document.getElementById('hint-text').textContent = scene.hint;
+
+  document.getElementById('chat-window').innerHTML = '';
+  document.getElementById('coach-card').classList.remove('visible');
+  document.getElementById('reset-btn').style.display = 'inline';
+  document.getElementById('turn-counter').textContent = '';
+
+  appendMessage('other', scene.exchanges[0].other, scene.initials);
+  showChoices(scene.exchanges[0].choices);
+}
+
+function appendMessage(who, text, initials) {
+  var chat = document.getElementById('chat-window');
+  var empties = chat.querySelectorAll('.empty-state');
+  empties.forEach(function(e) { e.remove(); });
+
+  var div = document.createElement('div');
+  div.className = 'msg ' + who;
+  var av = document.createElement('div');
+  av.className = 'msg-av';
+  av.textContent = who === 'other' ? (initials || state.scene.initials) : 'You';
+  var bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = text;
+  if (who === 'user') { div.appendChild(bubble); div.appendChild(av); }
+  else { div.appendChild(av); div.appendChild(bubble); }
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  var chat = document.getElementById('chat-window');
+  var div = document.createElement('div');
+  div.className = 'msg other';
+  div.id = 'typing-ind';
+  div.innerHTML = '<div class="msg-av" style="background:#1e1c18;border:1px solid #c8b890;color:#c8b890;font-size:10px;font-weight:600;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">' + state.scene.initials + '</div><div class="msg-bubble" style="background:#1e1c18;border:1px solid #2a2520;border-radius:4px 10px 10px 10px;padding:0.65rem 0.9rem;"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function hideTyping() {
+  var el = document.getElementById('typing-ind');
+  if (el) el.remove();
+}
+
+function showChoices(choices) {
+  var area = document.getElementById('choices-area');
+  var container = document.getElementById('choices');
+  area.style.display = 'block';
+  container.innerHTML = '';
+  choices.forEach(function(ch, i) {
+    var btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = ch.text;
+    btn.onclick = function() { handleChoice(ch, btn); };
+    container.appendChild(btn);
+  });
+}
+
+function hideChoices() {
+  document.getElementById('choices-area').style.display = 'none';
+  document.getElementById('choices').innerHTML = '';
+}
+
+function handleChoice(choice, btn) {
+  // Disable all choices
+  var allBtns = document.querySelectorAll('.choice-btn');
+  allBtns.forEach(function(b) { b.disabled = true; });
+  btn.classList.add('selected');
+
+  appendMessage('user', choice.text);
+  state.turns++;
+  document.getElementById('turn-counter').textContent = 'Exchange ' + state.turns;
+
+  // Show coaching immediately
+  showCoaching(choice.coaching, choice.tags);
+
+  // Show typing then response
+  setTimeout(function() {
+    hideChoices();
+    showTyping();
+    setTimeout(function() {
+      hideTyping();
+      appendMessage('other', choice.response, state.scene.initials);
+
+      // Load next exchange or end
+      state.exchangeIndex++;
+      var scene = state.scene;
+      if (state.exchangeIndex < scene.exchanges.length) {
+        setTimeout(function() {
+          showChoices(scene.exchanges[state.exchangeIndex].choices);
+        }, 400);
+      } else {
+        setTimeout(function() {
+          showEndMessage();
+        }, 400);
+      }
+    }, 900);
+  }, 300);
+}
+
+function showCoaching(text, tags) {
+  var card = document.getElementById('coach-card');
+  document.getElementById('coach-text').textContent = text;
+  var tagRow = document.getElementById('tag-row');
+  tagRow.innerHTML = '';
+  tags.forEach(function(tag) {
+    var span = document.createElement('span');
+    span.className = 'tag tag-' + tag.t;
+    span.textContent = tag.l;
+    tagRow.appendChild(span);
+  });
+  card.classList.add('visible');
+}
+
+function showEndMessage() {
+  var chat = document.getElementById('chat-window');
+  var div = document.createElement('div');
+  div.style.cssText = 'text-align:center;padding:1rem;font-size:13px;color:#5a5448;font-style:italic;border-top:1px solid #2a2520;margin-top:0.5rem;';
+  div.textContent = 'Conversation complete. Try a different scenario or start this one over.';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  document.getElementById('turn-counter').textContent = 'Complete';
+}
+
+function resetScene() {
+  if (state.scene) selectScene(state.scene.id);
+}
+
+window.onload = function() {};
+</script>
+</body>
+</html>
